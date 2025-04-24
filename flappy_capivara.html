@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Capybara</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB, #1E90FF);
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            overflow: hidden;
+            border: 4px solid #663300;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        #game-canvas {
+            background-color: #70c5ce;
+        }
+        
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10;
+        }
+        
+        h1, h2 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #FFD700;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        #score-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: white;
+            z-index: 5;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="400" height="600"></canvas>
+        <div id="score-display">Pontos: 0</div>
+        
+        <div id="start-screen">
+            <h1>Flappy Capybara</h1>
+            <h2>Clique ou aperte espaço para pular</h2>
+            <button id="start-button">Iniciar Jogo</button>
+        </div>
+        
+        <div id="game-over">
+            <h1>Game Over</h1>
+            <h2 id="final-score">Pontuação: 0</h2>
+            <button id="restart-button">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <script>
+        // Elementos do DOM
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const scoreDisplay = document.getElementById('score-display');
+        const finalScore = document.getElementById('final-score');
+        
+        // Variáveis do jogo
+        let frames = 0;
+        let score = 0;
+        let isGameRunning = false;
+        
+        // Imagens e sons
+        const sprites = new Image();
+        sprites.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYYAAAG4CAYAAABvBbwvAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAABe/SURBVHgB7d19bFTnfcfx7z3n7PKCsY3fsCkmJoSQhLwQQtKWrGNdkjaLNlVdJ5PWTupUrdPUTbdJ+2dREGKTNvHSP9KqKtq0f3Sd2k1dstZpNCgQCIQ3k5CXgIGY2Mb4Bdv4heu9nOfZc5Bz9jln40O8Hnzh+5FsH597ztl7jOMvz/M8z7EGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZhkLoQsrn5DnX/wJ9u7eLnmLrTtXp8aQ5NpHlOqKHY4/3dvh+6kP0qeaRiSPMM0SFh+hbWY+UNk7tVpse3X2Aw/Nf9w7JXnAFLZ4eA4+kDlPw8BkXVxgWV5YP+f/pxOyyNrjvmulrGeDvmDEH+k7mzpx9EPJAygGYO7bKCkv0SWGxNh5Z81fflzywH2p+mXnkQeG62VxPFPFMDrYPPDhji9LHkAxAHPfOhm8+Lkl6+56Y7+z+hfaH0CnLrR8Ud9ypdX0+6/0/6epW/IAxQDMbc/Y8cTny1YuF2v0I1n33Tcl//AXGVsaEutizxbnwXVHNO2/Q/bYUemlDyQPUAzA3LXV9tOrQmuLbImJ1dzxmly6dFYWwbPOgxs+LYHq5WIfbJHuI5+XPHB/FIPJi7F36/evM/JwHcdJlsfTG09vM+G7vr2H5PBfXZU5o8ce2fPYxx/yKpY9JBLrFBn7h+T44CmZZ5UVy+UTj29yyhLDUti1X1IfHZE8MXnupnMy7sLnjW6Pb5vZzrymtbOuy2ybOWZsX9/22Pf4NpN7dj8z22PH5Pf1/Y+9RnpbbN+5y2LIJw+JN9YrXslacbxPRPxTMn6tRaoea5bSZWtk9NQbMnr8NZlnj1oJ74sV1f1SsHRMgjUl4l2/IPWL75eFVlFRIZ965gFJlAw70rM3/cLmPplHMzdVMm+6DfpWzzjZm3F8m/YVbWl2PoIzY9X3m1sO6fnxfeYea/a2aCw6WpMHmW1aIzRcaL+5i/rDX3hR8sTESbd8/0+l0H5arOSwFDmzPwRvb2M+1K3Uyc6xz6RbR9qY7L4Fx5qYbTOPTe4Ym7LbmLHxjPL2bbSZ+cUwOXY+a1/9upSUXZBY8XFJ24+KZdVK2v9InL5FVuefyviAJ3NVQmLROyLuSTsmKvZwv1jpNglWpCXwwUV9bkrTF1F19/0ye9jYzIE28+YI7OAD0Vjz4jG98/mJbTP36eCejO/PzPR0JzS2iRnsYr6/c2I0FnMQ7M3sY36HsZszLjkp4vVJULIj/mAnkvbQRtLuJmmP+IHhpaGSB0P9g1YDJOXgF/dJyh+R0dFxCQKRoLCQm0g/sbObxzfRzTB9ky2l7/kLsD0bvvf2SvxX/tWx7OcXXp0eYN8eCb9QgOCLt5P3jS/9t+S4xVc9I2f0/PF/y20/U65JbOglEZnxgGQvsvbTm2SkrUcsO3vxnGwbXOOsemhEJCGFSZ0E4/F7xNa++iCz5gf0hlpZ9YSkL10Ud+CYBKnTEsQuyFjqY/Gjbkm59Z90NhRLHiisWyVFDVWSLO+X0upxKa4a1ZvrqMR8keE+W8YHRgPv9cQ35OTZaNiJepH4vmZM73wzRsLZsa5KrL+H7A+9vvB71lf1Lm/+O5LVVd4htVV3S7jPzR5nPiSCGS8wMxNGr8+8sMoHYj4oxwfn+NgLT23njL/I9EUkOGvfeYzf99+//Zd3SmJxqaQGIxJrScrYWFISicXiv/PBsVUkqk6IW9wj7ki5+CMJScYqJHFkXOy+oDgZtcUqfE+CuCPiv4eYpXXbz7vRDdW5a0xKQiXir5IgdTj+2mwJWfr994Nz4nt9UmD1SmL0gQWZVWqW3yvjPdvFG2vPHnSLtrLvzCxo6d70MO/lmzfe9I08c1F82Bc+O2Zi1si8iI0VvXCzz47j+3vnZz3/f/U/6hVtY9bfdM+nxK/9pbjDdbftWxVJiD14WFKXD4qfShUF6QJnZZXExvoled6T9ECpWGVbxE9aEmv5b+LHvyjjYq3+tfjN/yKp1j/r7vwlCdIW5kw+QiXJAu+3UlxcIWcvdEly+ZcksH5/QeYVLquWgoqEBOdaJej6QH8nXtGdeVxS9O7LG+3TFRl/i5aPZ5d5JlI/cMb8PPw987rlSVwvnGabm7tQR9fZm2Zu3PPiGqm0vywz57V71khK7NEeGe67JH6yYEHmFTXUSnLNJnG9m5ufPpS9jdtEbN+JXzCT8R/TXnRzNndvxs8gM7nNtHTjVsXvYYFKSm3ZvXu7LKrxLnE7Oibv49M/rkdI4Xv6/g7+Q9xTZLvDYs/eJijjsrNP9l5kL3yPtM2+qRbDrD03fufHa/3IzMUm3tXwwpMdZ94kPfcmw8bnSvZ5YvJGTk90mJxXTN6UNv7jE5Odeb/wzRbfLnZy7C6XbTFjKtQN7y+/KD4vcg9zs0eP5OcgLJDsHy7qzb5G+o8eRORm9hkdmdk2c7PMepDy9+jvXz74QHJ8Pm7uGF2JxedvLf7iI+8qZtxY5oZ0dSZpUHRMHB7zAcRmZkQQvQnZmRt27r4wP/cBw2wXbTczf+4DNJo9M94+MzOymZkfRn9G51x07tg2E88eDRm2mXlsYv/Ry6I5nKZm5s+dzDM3e/Q66Jwmp802+rzQmFBu9m6+7Lp5LvPb1B92eWPnbNzWHzB5U0dnH3tz5E2OzM0cnTJ7dp3ZdvJyM2bujR2Ym2nyDZW5s2de5Mx22dsZf9vJjDFj7diY2I19MjZzJodH1s05phcdm7mTwwfIyL48MjdaIBgbMnPz3FMzL8vDhcRumHkBFyTHLMnx/Jl5oZ95Uc/9Q2Ly6M55Mw3lMz64zXbRfedeFLNfZOY+M2/a6ObO/hGYPS/fZ8aHpfnj5XcmcvzXZt8m8eFm9vXHnHOeO8/k/v07bH/XvzL6uiRE+npOy0IrK0uItWKVBGf/a/LkLF5GCUZbxR/aLYOdxRIb7ZegOSWF/lGxz0e/T2nBMgn8XrHTYxIbD2TM9yQ49ZHI6EgUHPVJbeCKBLZuHe2WROEGcdO9YnmtIunXJS6h6JgSW4JYXINfkn0iKUkPdIo9Nh5t+64ERrGHvdcQKlGyTBy7TLyWHyO3sLRUgpqtEnTqv/f2Dk9SoyKx8kCqgkGJiYhvd+p7FRGncK30pPfGW89uF4s1rlyvTq/eGnW8PtkrfiLrZ5DWaHpL4w2dFtdaUL+p5tbPFgvGjpSIV/CsJIeXiuV3ROEXrUtI0dUPJRaUhhe/4aLF4tnDEus/LamhQbEHdV+7UwKrUZLSK0F1lVh2mRRbKxZkXrDm01L0xXoZLXhTxlP7o4/qeMmE1JRXSHCmM3oXdRfTRFB6Tc8tEeuSPu2NRaUaLLLPLmj6U7kHVw5VitV/Qd8r7dSU3PJBUfJlCRK94g/ulWB8j8wFxTU6nkfFL9+qz7NRCVJvR5+v/hVpDfx6vQ+jvz9+aotY/b0y0jHvj4C4Yysrykqwvphi0OIo2fAVSf9/w2Iqb9S5sNcl1vMvkjraJHNFYvxVsTyRovIXxS+8K8oNbBB39JjEK26IffjbUlK+QhYs/UmaP03VlO6RsaE3FvZaHh99/BNLpL9vj15YT0iQHJW+gUHZ/3G73B0eFPfjC3pKZH06S9Z/TUqf/YpsLHlBimqqJTE2GG3jdkssVi7B+KAkS0ol1deXnl0sSys3So9cEzt+5CpSC95PigsuSGLgNSkuflFv9mTW+z4xvb4q3izBcK+0XfwLfWO+kvl099HHZdTpkJY9P5F81xUE6Q3lCbE7nx19X1sYNlj17C9Ko9RIfcUnZdPahyWprxXLXxLdlxJYNVJQcEziQZU0D+yXeEm9BHaZ/jPzpuQxSRfcJ7X+l6JZzCLZt6dbzgwXSnzIJNctMfZGz6mLm66JHS/R83pErrfFX3XsZj8v5spjUuCXSdBcKcnUmIwN+PLGzr9akHn9g98WN2hbsnktXUeOvnRO8sWyRIwPpzdljR1b+ZFZMnxZSq1zujl+J9l6zw12aAqL7k2KHZ4+fNh6YFDS4s96bs++VVFQ79lbbF8fkF95ynSsyLG/8OhiB/7yTW7LGhvYMjo2Oo+LXi3qFYnddV6Pt6TL7RAp6paieFPWhBm1zR4f390lJbLHWv5OHxn6Wn+b07I77I/ZFpf2hduY9e6+lDZtlFsrOk9sybwgbvqcvr9X9FXnddmm50Gxs4o/vc+MPgvG9Dn63tgFmh93z7//ifOq6UffldJl28Ltb+w7+f3MTfcmsOL/1pS9Ib3PxsKqe3pCWvr2yEJqbwuk9q5esbr/RSbP+9wy7r+r+7dK2vuROL0/i96C78aT3+f3OvR7+G9P/rUyYv2nNFRu0ffhA/3+/EjmgrM6S67dqOe+1UXpcXF3vy7Jxrc1qNWFy5wZy++VoLuQnbLu0Jn97fpeXFiQeUMD/y5Vj31Zyh96KB0UdMoP9Vdmj0xGgclEg/RYOL775SPiBb50nf6+FMdDCUBKfCvQdeSfpGLLMzJXFL2wVAY7/kYCfWN/9pmnJC31qZVStTz+H0tcyKWMJt0fTtPnY9WxVklfXSDLP/9p6T3w72Gw1zz0onTZL8bfF33Wm/u0ub4vD8qJd380f7fmj7Gxd15Mj/Y+L0k/fgtOFsJ4d3M+nP2vx1ZdWKsZ2eOoJCw/mpEgutHrGv/C3X9ZLmPBYYk13i2WvUEW0qbNq2LHdr0qs54zM36TUxdNZ83MdK5ZvwlqNDzRm8mKtkuvvixV6w5K9fInRK8nt90isZYHJD76tgw0vxM+U+dDKb97E0z+OEYOdEnljuUyfM6/5UdfYtrGSo5KTVHYctrZvqPxBxGNnsG6P0ULtdptNnniD0g4U9cxqeiVaEbmD+5kRptl7ntTtkY09OaGMY9w3wzNpPWRIFHYJN6JiyK9p2QhHbvokJPdv6Wve0yOvPySpD/6XvSJpBm5m3lR74mfaCG5KXH33y/2YNdtbmYTyVQvSPrUSxI72ia3YicvS/rCB+JWJ6RkzXLPyoaOprYnX7JG3zmm56ILLnT6vCtW/G+SdlgYJT16XyQkCBpkrgjsIBxnUiA7FHuO3VwLrPggdCJyQm/s3rSG0LfE7zkmXlcdLxYxkaoUK/lqbCxsw92Mxs27JD1yRMb6PxLHS0nMChLFazepGzZJ8cZ75NTuH1BM/2R8LPXsqfa/lqLoTjTPpx9vvCRvnHk6/vGS6u+JlYifXqPnNj0K/UFXy0JqfjtwrC/9hNmLRmMz52X2ZkYhzZ7ljg+akc0+wG1m7oDo9OsLP9QztsdvuHAxtm3FX6eJmTB64sxeH5N/4R/P9Pz4+nD1lGntzH/nzg7Nij+Te0Bj3c2yoI5cGJdWa79NenHUXVS9SWyjLDzfFmdZ1h+XMJ8BkYx85l2I7zx7I9sJ52UzcnM/9+Y2c6fGtGY3N/xM0xq27bLMOGbujZq9fWaeTB7nzjEzb2pYOlW/j3oRq+9SvySL1khkPBEe5U75zT8JrxezL2BmfuZ5ZYX7T3ecvTEjuaP+BfbkGLct+3rvj/5ZSf/h9yUfB6GT+wfGm2T2v//EmxldI7nHm/fQzEyn37DNzPnmjVF3a+4MJ3s/5ngT42b2nZy5RdvljjjzbMzcDZk7u8t+Y0efxbOwSue8g5t7/ORsKZr9Z28fyxpr5kQzi9zjGw+9Lmb2l/2hMnv7me3MH96MLfP2mLszezae+W9hY980m5rfWvR5ZGa3mX16d5y5CXP3uf28yTHRzS53djz7/J4znrN36uO7zuv7/4qkhg9F/0tMZuzwO6MlzO9rV85YMz/rnbWYWXD2a49Gx89uJzObMnOz55x7/Mz59WYs0egZc2dk5vxnXI/9MecsOx49t2dtG99/9lhzzcweZ84/8zjt8X3HX8PsN/3erLnNH5vX8kqvJK0lMnmsGRvto+PMO/Lq0HiLTL+RVxzMrPTpf9cHc1a+Y/Y1e07u/vFZm5kf/xIbnTd73+xxuXMzzzKzzeRxs+fPvRZm7ty5M9s6Md7fKkUF5eFDw/JRzvXmzsmcMzc2nnuOyblvPTY3Pnfu6Jrn7D97ft8wh8n+uWPnzovNGWdm7LmzV/P7G89qPzk3Oy53jnlfe+Y8o3uWe14z58y9Bs4Z9Zjc2GhseD3mjnEyV8S8n9nHbGuONYvZ3pvzb5fJnzM3V9Jc5Fy/NuY9yT1v9q49+tq9u/q7Yh34Pxnuj5d1FEY3StT3Mfv8BnPmnjXfzDezTdbtGz9vmE9T/1G2r9Qbwd4u0t8cnbfMGYEn/pis2PiYjI+OyFjGHJm5F2S3Muv3mzkncx+z7ez5uck08ziPb5tzzszf6b/euy6/K22dfx4vKzE3mR1P0nGdUl25QtLjv6vH9GfGRrOm2deFyft95rHxGxGbvTv7vYjP/HLff+da/NjcYziZuTI+yzXzc47R2Pj7mX2Rc8fMfO2T18Qk73nVsiXipl4Mp/aedcUK60tEPj9bCKzJcaNj41KDZyRtPa/HD+aMMWOjONJfH74+z9pv9vzoa+Sxts/qMZP3S6DjYtHdGI4z19Zcv1H9+jGR+vv0vH1a5uN1sZcuW76q1+19Lfx40DHz39w5/ZzfF40P/znR+Z7ek3oN9P3Nfr0lxcPiT7yHZm42c46xzaKZMd7sa44x72t5tCQ34edfvPjEuXUAFtOJ9pTU19dTDMDct+eDftm/by8fn4B8sNXxvWO2P9xFMQBz31ZJpfcEKyoTlAIw9z1buqRcDh/4gFIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDdYyF0YeWZgQutxdix/WUJXLuopmb1eLmTJktK2v3CoEWvVau0j6W9wSAtfipIlqbDcbHUIXlARh56pK2kbvV0kEWyM/2f0ZuyfbvMV6Nvr/ilfqe/NGhc2X/6Ycl3FANY1jAYQbKm2B/te2fD+v83Ojz+L2sPR/3y4LihW/bJPLqrLuGq5KhkfjrE+tO/uO7Xr4j41/9fy2/1t09H87qnoxYrfuE49IiUy2JrS3Wl9p8cuFgpZoFzzvmBwrH+qqV9CfvO3uZFdLZjIKic1/crGPY7TvTJ5Fdq9vzD3dK8e7vkCYoBYApLlM/p+yVWzv+P2JbaRlhF+sXRQpjfn6Xun3X3xvstlQexw/p9l7YtbU9VN/4rFAM4lQQAAAAAAAAAAAAAAAAAAAAAAADcPv4PujQ2WGWYYuEAAAAASUVORK5CYII=';
+        
+        // Sons do jogo
+        const jumpSound = new Audio('data:audio/wav;base64,UklGRnwJAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVgJAACAgICAgICAgICAgICAgICAgICAgICAgICBgYGBg4KCgYB/fn5+fn+AgoSGiImIh4WDgoGAgICAgIGCg4WGh4iIh4aFhYSEhIWGh4iJiYmIh4WEg4KCg4SFhoaHh4eGhYSDgoKBgYGBgYGBgIB/fn18e3t6enp7e3t8fH19fXx8e3p5eHd3dnZ2dnZ3d3h5eXp7e3x8fHx7enp5eHh3d3d3d3d4eHl5eXl6enp6enl5eXh4d3d3dnZ2dXV1dXV1dXZ2dnd3d3h4eHh4d3d3dnZ1dXR0c3Nzc3N0dHV1dXZ2dnd3d3d3dnZ1dXV0dHNzc3JycnJycnJzc3N0dHR1dXV1dXV1dHRzcnJxcXFwcHBwcHBwcXFxcnJyc3Nzc3NzcnJycXFwcHBvb29ubm5ubm9vb3BwcHFxcXJycnJycXFxcHBvb29ubm5tbW1tbW1ubm5vb29wcHBwcHBwcHBvb29ubm1tbWxsbGxsbGxtbW1ubm5vb29vb29vbm5ubm1tbGxsatvb29vb29vb29vb2dnqVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCw==');
+        const scoreSound = new Audio('data:audio/wav;base64,UklGRsQCAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YaACAACAf4CEhoWGiIaEgX16eHd3eHh6fYGChoiKjI2Ojo2MioiFgXx4c3Bua2pqbG1vcnZ6foOIjI+SlJWVlJKPjIiDfXdxbGdkYl9iYWNmaW1yeH2Dio6TlZiaopqYl5SHjYJ7dSyVWF9LXFdWWF1fZGpwdnp/goWJjpKVl5iZmZmXlJCLhoF9enl4d3h4eXp7fH5/gYOFh4mKioqLiomIh4WEg4GAgH5/fXx6eXh3d3d4eXl6e31+f4CBgoKCgoKBgH9+fXx7enp5eXl5enp7fHx9fn9/gIGBgYGBgYCAgH9/f35+fn19fX19fX5+fn5/f39/gICAgICAgIB/f3d2dXZ1dXZ3d3l5e3t9fX9/gIGBgoKCgoKCgYGAgICAfn59fXx8e3t7e3t7e3x8fX19fn5/f39/f39/f39/f39+fn5+fn5+fn5+fn5+fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+fn5+fn1+fn19fX18fHx8e3t7e3t7e3t7e3t8fHx8fX19fX5+fn5+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+fn5+fn5+fn5+fn1+fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fn5+fn5+fn5+fn5+fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/fn5+fn5+fn5+fn4=');
+        const hitSound = new Audio('data:audio/wav;base64,UklGRoQDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YWADAABqaGhoaGhoaGhoaGlqampqa2xsbW5ub3BvcG9ub25tbGtqaWhnZ2ZlZGNiYWBfXl1cW1pZWVhXV1ZWVVVVVVVWVlZXV1hZWVpbXFxdXl9fYGFiY2RlZmdoaGlqampqamlpaWhnZ2dmZWVkZGNjYmJjYmJiYmJjY2NkZGRlZWVmZmdnZ2hoaGlpaWpqampqa2tra2tra2tra2tra2traWiGiHyBeXl8fH6Ag4SMj5EUFW9vcXN1d3l7fX+BgoPKy93T08zJwLy1tatfW5yejIV4cGVcU0s/OCYG0q0P5bkRt4YPkGaRY02phSq9jx/DjiDGkCPMlCPVmiTcoCPkpCLrqCHwqyH1rSH5sCH9siHirGdHPjAkGAwFAQMJFCQyPlBZYmloanJwcX+Bg3+CgH5+fH19fYCFh4uQl5ygpamvsba8wcfL0NTZ3eDk5+rr7/Dz9PX29vf39/f39vb19fTz8vHv7u3s6+rp6Ofm5eTj4uHg39/e3dzcmJeOhnx0bWZfWFFKQjo0LSYgGhQOCQQAAQQHDBEWGx8kKS0yNjtAQ0dLTlJVWFxfYmZpa21vcXN1d3h5ent8fX19fX19fX19fX19fH19fXx8fHx7e3t7e3t7e3t7fHx8fH19fX1+fn5+fn9/f39/f39/f3pgT0A2LiUdFQ4JBAEAAQMGCg4SFhoeIiYpLS8yNDY4Ojw9Pj9AQUFDREVGR0hJSUpLS0xMTU1OTk5PT09QUFBQUFBQUFBQUFBPUFBQUFBQUFBQUFBQUFBQUFFRUVFRUVFRUVFRUVFRUVFQUFBQUFBQUFBQUFBQUFBQUFBQUFBQT09PT09PT09PT09QUFBQUFBQUFBQUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVBRUFFRUVFRUVFRUVFRUVFRUVFRUlJSUlJSU1NTU1NTU1NT');
+        
+        // Objetos do jogo
+        const capybara = {
+            x: 80,
+            y: 250,
+            width: 50,
+            height: 40,
+            gravity: 0.28,
+            jump: 4.6,
+            velocity: 0,
+            draw: function() {
+                ctx.save();
+                
+                // Corpo principal (marrom claro)
+                ctx.fillStyle = '#A0522D';
+                ctx.beginPath();
+                ctx.ellipse(this.x + this.width/2, this.y + this.height/2, this.width/2, this.height/2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Cabeça (marrom mais escuro)
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.ellipse(this.x + this.width - 10, this.y + this.height/2 - 5, 15, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Olhos
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width - 5, this.y + this.height/2 - 8, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Nariz
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.ellipse(this.x + this.width + 2, this.y + this.height/2 - 5, 3, 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Orelhas
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width - 10, this.y + this.height/2 - 14, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Patas
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x + 10, this.y + this.height - 5, 8, 5);
+                ctx.fillRect(this.x + 25, this.y + this.height - 5, 8, 5);
+                
+                ctx.restore();
+            },
+            update: function() {
+                this.velocity += this.gravity;
+                this.y += this.velocity;
+                
+                // Colisão com o chão
+                if (this.y + this.height >= canvas.height - ground.height) {
+                    this.y = canvas.height - ground.height - this.height;
+                    this.velocity = 0;
+                }
+                
+                // Colisão com o teto
+                if (this.y <= 0) {
+                    this.y = 0;
+                    this.velocity = 0;
+                }
+            },
+            flap: function() {
+                this.velocity = -this.jump;
+                jumpSound.play();
+            }
+        };
+        
+        const pipes = {
+            position: [],
+            width: 60,
+            gap: 170,
+            minHeight: 80,
+            maxHeight: 350,
+            dx: 2.5,
+            
+            draw: function() {
+                for (let i = 0; i < this.position.length; i++) {
+                    const p = this.position[i];
+                    
+                    // Cano superior
+                    ctx.save();
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(p.x, 0, this.width, p.topHeight);
+                    
+                    // Borda
+                    ctx.fillStyle = '#388E3C';
+                    ctx.fillRect(p.x - 2, p.topHeight - 20, this.width + 4, 20);
+                    
+                    // Cano inferior
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(p.x, p.topHeight + this.gap, this.width, canvas.height - p.topHeight - this.gap - ground.height);
+                    
+                    // Borda
+                    ctx.fillStyle = '#388E3C';
+                    ctx.fillRect(p.x - 2, p.topHeight + this.gap, this.width + 4, 20);
+                    
+                    ctx.restore();
+                }
+            },
+            
+            update: function() {
+                if (frames % 90 === 0) {
+                    // Adiciona novos canos
+                    const topHeight = Math.floor(Math.random() * (this.maxHeight - this.minHeight) + this.minHeight);
+                    
+                    this.position.push({
+                        x: canvas.width,
+                        topHeight: topHeight,
+                        passed: false
+                    });
+                }
+                
+                // Move todos os canos
+                for (let i = 0; i < this.position.length; i++) {
+                    const p = this.position[i];
+                    p.x -= this.dx;
+                    
+                    // Verifica se já passou pela capivara
+                    if (!p.passed && p.x + this.width < capybara.x) {
+                        p.passed = true;
+                        score++;
+                        scoreDisplay.textContent = Pontos: ${score};
+                        scoreSound.play();
+                    }
+                    
+                    // Colisão com a capivara
+                    if (
+                        capybara.x + capybara.width > p.x &&
+                        capybara.x < p.x + this.width &&
+                        (
+                            capybara.y < p.topHeight ||
+                            capybara.y + capybara.height > p.topHeight + this.gap
+                        )
+                    ) {
+                        // Colisão detectada
+                        hitSound.play();
+                        gameOver();
+                    }
+                }
+                
+                // Remove canos que saíram da tela
+                if (this.position.length > 0 && this.position[0].x + this.width < 0) {
+                    this.position.shift();
+                }
+            }
+        };
+        
+        const ground = {
+            height: 70,
+            
+            draw: function() {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(0, canvas.height - this.height, canvas.width, this.height);
+                
+                // Detalhes da grama
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(0, canvas.height - this.height, canvas.width, 20);
+                
+                // Textura do solo
+                ctx.fillStyle = '#A0522D';
+                for (let i = 0; i < canvas.width; i += 30) {
+                    ctx.fillRect(i, canvas.height - this.height + 25, 20, 5);
+                    ctx.fillRect(i + 15, canvas.height - this.height + 35, 15, 5);
+                    ctx.fillRect(i + 5, canvas.height - this.height + 45, 18, 5);
+                }
+            }
+        };
+        
+        const background = {
+            draw: function() {
+                // Céu
+                ctx.fillStyle = '#70c5ce';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Nuvens
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.beginPath();
+                ctx.arc(100, 80, 30, 0, Math.PI * 2);
+                ctx.arc(130, 70, 35, 0, Math.PI * 2);
+                ctx.arc(160, 85, 25, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(280, 120, 25, 0, Math.PI * 2);
+                ctx.arc(310, 110, 30, 0, Math.PI * 2);
+                ctx.arc(340, 125, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Sol
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(350, 80, 40, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Montanhas ao fundo
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.moveTo(0, 380);
+                ctx.lineTo(90, 280);
+                ctx.lineTo(160, 360);
+                ctx.lineTo(250, 250);
+                ctx.lineTo(350, 340);
+                ctx.lineTo(400, 300);
+                ctx.lineTo(400, 380);
+                ctx.fill();
+            }
+        };
+        
+        // Funções do jogo
+        function draw() {
+            background.draw();
+            pipes.draw();
+            ground.draw();
+            capybara.draw();
+        }
+        
+        function update() {
+            capybara.update();
+            pipes.update();
+        }
+        
+        function gameLoop() {
+            if (!isGameRunning) return;
+            
+            // Limpa o canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Atualiza e desenha
+            update();
+            draw();
+            
+            // Incrementa os frames
+            frames++;
+            
+            // Colisão com o solo
+            if (capybara.y + capybara.height >= canvas.height - ground.height) {
+                hitSound.play();
+                gameOver();
+                return;
+            }
+            
+            // Continua o loop do jogo
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function startGame() {
+            // Configura o jogo
+            frames = 0;
+            score = 0;
+            scoreDisplay.textContent = Pontos: ${score};
+            
+            // Reseta a capivara
+            capybara.y = 250;
+            capybara.velocity = 0;
+            
+            // Limpa os canos
+            pipes.position = [];
+            
+            // Esconde a tela inicial
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            
+            // Inicia o jogo
+            isGameRunning = true;
+            gameLoop();
+        }
+        
+        function gameOver() {
+            isGameRunning = false;
+            finalScore.textContent = Pontuação: ${score};
+            gameOverScreen.style.display = 'flex';
+        }
+        
+        // Controles do jogo
+        function handleJump(e) {
+            if (!isGameRunning) return;
+            
+            if (e.type === 'keydown' && e.code !== 'Space') return;
+            
+            capybara.flap();
+        }
+        
+        // Event listeners
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+        canvas.addEventListener('click', handleJump);
+        document.addEventListener('keydown', handleJump);
+        
+        // Tela inicial
+        background.draw();
+        ground.draw();
+        capybara.draw();
+    </script>
+</body>
+</html>
