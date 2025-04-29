@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro Jiu-Jitsu</title>
+  <link rel="stylesheet" href="jiu.css">
+</head>
+<body>
+  <h1>Cadastro de Alunos - Zforce Escola de Lutas</h1>
+
+  <div class="form-container">
+    <form id="formAluno" onsubmit="cadastrarAluno(event)">
+      <label for="nome">Nome:</label>
+      <input type="text" id="nome" required />
+
+      <label for="idade">Idade:</label>
+      <input type="number" id="idade" required />
+
+      <label for="faixa">Faixa:</label>
+      <select id="faixa" required>
+        <option value="">Selecione</option>
+        <option value="Branca">Branca</option>
+        <option value="Cinza">Cinza</option>
+        <option value="Cinza e Preto">Cinza e Preto</option>
+        <option value="Amarela">Amarela</option>
+        <option value="Amarela e Preto">Amarela e Preto</option>
+        <option value="Laranja">Laranja</option>
+        <option value="Laranja e Preto">Laranja e Preto</option>
+        <option value="Verde">Verde</option>
+        <option value="Verde e Preto">Verde e Preto</option>
+        <option value="Azul">Azul</option>
+        <option value="Roxa">Roxa</option>
+        <option value="Marrom">Marrom</option>
+        <option value="Preta">Preta</option>
+      </select>
+
+      <label for="modalidade">Modalidade:</label>
+      <select id="modalidade" required>
+        <option value="">Selecione</option>
+        <option value="Infantil">Infantil</option>
+        <option value="Juvenil">Juvenil</option>
+        <option value="Adulto">Adulto</option>
+      </select>
+
+      <button type="submit">Cadastrar</button>
+    </form>
+  </div>
+
+  <div class="agenda">
+    <h2>Agenda de Treinos</h2>
+    <table>
+      <tr><th>Dia</th><th>Horário</th><th>Turma</th></tr>
+      <tr><td>Segunda-Feira</td><td>18:10</td><td>Infantil</td></tr>
+      <tr><td>Segunda-Feira</td><td>19:00</td><td>Infanto Juvenil e Juvenil</td></tr>
+      <tr><td>Segunda-Feira</td><td>20:00</td><td>Iniciante</td></tr>
+      <tr><td>Terça-Feira</td><td>18:00</td><td>Infanto Juvenil e Juvenil</td></tr>
+      <tr><td>Terça-Feira</td><td>19:00</td><td>Feminino</td></tr>
+      <tr><td>Terça-Feira</td><td>20:00</td><td>Adulto</td></tr>
+      <tr><td>Quarta-Feira</td><td>18:10</td><td>Infantil</td></tr>
+      <tr><td>Quarta-Feira</td><td>19:00</td><td>Infanto Juvenil e Juvenil</td></tr>
+      <tr><td>Quarta-Feira</td><td>20:00</td><td>Iniciante</td></tr>
+      <tr><td>Quinta-Feira</td><td>18:00</td><td>Infanto Juvenil e Juvenil</td></tr>
+      <tr><td>Quinta-Feira</td><td>19:00</td><td>Feminino</td></tr>
+      <tr><td>Quinta-Feira</td><td>20:00</td><td>Adulto</td></tr>
+      <tr><td>Sexta-Feira</td><td>18:10</td><td>Infantil</td></tr>
+      <tr><td>Sexta-Feira</td><td>19:00</td><td>Infanto Juvenil e Juvenil</td></tr>
+      <tr><td>Sexta-Feira</td><td>20:00</td><td>Iniciante</td></tr>
+    </table>
+  </div>
+
+  <div class="cadastros" id="listaAlunos">
+
+  </div>
+
+  <script src="jiujitsu.js"></script>
+</body>
+</html>
